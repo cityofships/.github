@@ -20,6 +20,7 @@ name: Upstream Sync Workflow
 env:
   GITHUB_TOKEN: ${{github.token}}
   DOWNSTREAM_OWNER: stackhpc
+  DOWNSTREAM_PREFIX: stackhpc
   UPSTREAM_OWNER: openstack
 jobs:
   upstream-sync:
@@ -62,7 +63,7 @@ jobs:
         if: steps.get_upstream_sha.outputs.result != ''
         id: check_if_downstream_branch_exists
         run: |
-          api_path="/repos/${{env.DOWNSTREAM_OWNER}}/$(basename $(pwd))/branches/stackhpc/${{inputs.release_series}}"
+          api_path="/repos/${{env.DOWNSTREAM_OWNER}}/$(basename $(pwd))/branches/${{env.DOWNSTREAM_PREFIX}}/${{inputs.release_series}}"
           response=$(gh api -H "Accept: application/vnd.github.v3+json" $api_path --silent --include) || true
           if [[ "$response" =~ "HTTP/2.0 200 OK" ]]; then
             echo "result=true" >> $GITHUB_OUTPUT
@@ -78,7 +79,7 @@ jobs:
           --method POST \
           -H "Accept: application/vnd.github.v3+json" \
           "/repos/${{env.DOWNSTREAM_OWNER}}/$(basename $(pwd))/git/refs" \
-          -f ref='refs/heads/stackhpc/${{inputs.release_series}}' \
+          -f ref='refs/heads/${{env.DOWNSTREAM_PREFIX}}/${{inputs.release_series}}' \
           -f sha=${{steps.get_upstream_sha.outputs.result}}
       - name: Check if upstream is ahead of downstream
         if: steps.check_if_downstream_branch_exists.outputs.result == 'true'
@@ -87,7 +88,7 @@ jobs:
           ahead_by=$(gh api \
           -H "Accept: application/vnd.github.v3+json" \
           "/repos/${{env.DOWNSTREAM_OWNER}}/$(basename $(pwd))"\
-          "/compare/stackhpc/${{inputs.release_series}}..."\
+          "/compare/${{env.DOWNSTREAM_PREFIX}}/${{inputs.release_series}}..."\
           "${{env.UPSTREAM_OWNER}}:${{steps.get_upstream_sha.outputs.result}}" --jq '.ahead_by')
           echo "result=$ahead_by" >> $GITHUB_OUTPUT
       - name: Create copy of the upstream branch
@@ -110,7 +111,7 @@ jobs:
           -f title="Synchronise ${{inputs.release_series}} with upstream" \
           -f body="This PR contains a snapshot of ${{inputs.release_series}} from upstream ${{steps.get_upstream_sha.outputs.upstream_ref}}." \
           -f head="${{env.DOWNSTREAM_OWNER}}:upstream/${{inputs.release_series}}-$(date +%F)" \
-          -f base="stackhpc/${{inputs.release_series}}" --jq '.url')
+          -f base="${{env.DOWNSTREAM_PREFIX}}/${{inputs.release_series}}" --jq '.url')
           echo "result=$(basename $pull_request_url)" >> $GITHUB_OUTPUT
       - name: Add labels to pull request
         if: steps.check_if_ahead.outputs.result > 0
