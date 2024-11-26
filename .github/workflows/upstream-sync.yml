@@ -19,9 +19,6 @@ name: Upstream Sync Workflow
         default: unmaintained
 env:
   GITHUB_TOKEN: ${{github.token}}
-  DOWNSTREAM_OWNER: stackhpc
-  DOWNSTREAM_PREFIX: stackhpc
-  UPSTREAM_OWNER: openstack
 jobs:
   upstream-sync:
     runs-on: ubuntu-latest
